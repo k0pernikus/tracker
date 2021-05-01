@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <!-- Required meta tags -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css"
+          integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+
+    <title>Wiegen</title>
+</head>
+<body>
+
+<div>
+    <div id="letztesWiegen">
+        Welt
+    </div>
+    <div class="input-group">
+        <form>
+            <div class="form-group">
+                <label for="date">Wiegedatum</label>
+                <input type="date" class="form-control" id="date" aria-describedby="date">
+            </div>
+            <div class="form-group">
+                <label for="weight" type="number">Gewicht</label>
+                <input type="number" class="form-control" id="weight" placeholder="" step=".01">
+            </div>
+            <button type="button" class="btn btn-primary input-btn" onclick="eintragen()">Eintragen</button>
+            <div id="list">
+                <ol>
+                </ol>
+            </div>
+        </form>
+    </div>
+</div>
+<div>
+    <button type="button" class="btn btn-secondary" onclick="listeLeeren()">Liste leeren</button>
+    <button type="button" class="btn btn-primary" onclick="letztenWertAnzeigen()">Letzten Wert anzeigen</button>
+</div>
+
+<!-- Optional JavaScript -->
+<!-- jQuery first, then Popper.js, then Bootstrap JS -->
+<script src="https://code.jquery.com/jquery-3.3.1.slim.min.js"
+        integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo"
+        crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"
+        integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1"
+        crossorigin="anonymous"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"
+        integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM"
+        crossorigin="anonymous"></script>
+<script>
+    $(document).ready(() => {
+        currentDateAsPlaceholder();
+        subscribeBtnChange();
+        letztesWiegeDatum();
+    });
+
+    const letztesWiegeDatum = () => {
+        const $last = $('#letztesWiegen');
+        $last.empty();
+        const history = getHistory();
+
+        try {
+            const lastItem = history[history.length - 1];
+            const date = lastItem.date;
+            $last.append(`<span>Letztes Wiegen: <strong>${date}</strong></span>`);
+        } catch (e) {
+        }
+    };
+
+    const currentDateAsPlaceholder = () => {
+        const $date = $('#date');
+        $date.val(new Date().toJSON().slice(0, 10));
+    }
+
+    const getHistory = () => {
+        let history = localStorage.getItem('history');
+        if (history === null) {
+            localStorage.setItem('history', JSON.stringify([]))
+            localStorage.setItem('history-max-id', '0');
+
+            return [];
+        }
+
+        return JSON.parse(history);
+    }
+
+    let currentOffset = 0;
+    const letztenWertAnzeigen = () => {
+        const history = getHistory();
+        if (currentOffset >= history.length) {
+            return;
+        }
+
+        const $list = $('#list ol');
+        const item = history.reverse()[currentOffset];
+
+        $li = $(`<li>${item.date}: ${item.weight}kg</li>`);
+
+
+        $list.append($li);
+
+        $deleteBtn = $('<button data-id="${item.id}" type="button" class="btn btn-sm" >X</button>');
+        $li.append($deleteBtn);
+
+        $deleteBtn.on('click', function () {
+            deleteById(item.id);
+            $li.remove();
+        });
+
+        currentOffset++;
+    }
+
+    const listeLeeren = () => {
+        currentOffset = 0;
+        $('#list ol').empty();
+    }
+
+    const addToHistory = (date, weight) => {
+        const newId = Number(localStorage.getItem('history-max-id')) + 1;
+        localStorage.setItem('history-max-id', newId.toString());
+        const history = getHistory();
+        const id = newId;
+
+        history.push({id, date, weight});
+        localStorage.setItem('history', JSON.stringify(history));
+    }
+
+    const deleteById = (id) => {
+        listeLeeren();
+        const history = getHistory().filter((item => {
+            return item.id !== id
+        }));
+
+        const result = JSON.stringify(history);
+        localStorage.setItem('history', result);
+    }
+
+    const subscribeBtnChange = () => {
+        const $weight = $('#weight');
+        $weight.on('change', () => {
+            if ($weight.val() !== '') {
+                $('.input-btn').prop("disabled", false);
+            } else {
+                $('.input-btn').prop("disabled", true);
+            }
+        });
+    }
+
+    function eintragen() {
+        const formatter = new Intl.DateTimeFormat('de', {
+            year: 'numeric',
+            day: '2-digit',
+            month: '2-digit',
+            hour12: false
+
+        });
+        const date = formatter.format(new Date($('#date').val()));
+        const weight = $('#weight').val();
+        addToHistory(date, weight);
+        letztesWiegeDatum();
+    }
+</script>
+
+</body>
+</html>
